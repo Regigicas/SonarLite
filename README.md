@@ -41,10 +41,15 @@ de aplicaciones a canales y desactivación de canales.
 
 - La pestaña "Presets" edita el preset seleccionado del canal elegido. Los cambios se aplican y se
   guardan al momento, como en GG.
-- Juego, Media y Aux: ecualizador con graves, voz y agudos, audio espacial (auriculares o
+- Ecualizador paramétrico de 10 bandas en todos los canales: cada banda se activa o desactiva y
+  tiene tipo (campana, estante de graves o de agudos, paso bajo, paso alto o rechazo), frecuencia
+  (20–20000 Hz), ganancia (±12 dB) y factor Q (0,5–10), con deslizador y casilla para escribir el
+  valor. La curva de respuesta se dibuja encima: arrastra un punto para mover su banda y usa la
+  rueda del ratón para cambiar su Q.
+- Juego, Media y Aux: refuerzos de graves, voz y agudos, audio espacial (auriculares o
   altavoces), aumento de volumen y Smart Volume.
-- Chat y Micrófono: ecualizador, cancelación de ruido IA (ClearCast), reducción de ruido de fondo
-  y de impactos, puerta de ruido (con umbral automático) y estabilizador de volumen.
+- Chat y Micrófono: cancelación de ruido IA (ClearCast), reducción de ruido de fondo y de
+  impactos, puerta de ruido (con umbral automático) y estabilizador de volumen.
 - Nuevo, Duplicar, Renombrar, Restablecer, Borrar y favorito (★, salen primero en las listas).
   Los presets de SteelSeries se pueden editar y restablecer, pero no renombrar ni borrar.
 
@@ -71,7 +76,8 @@ de aplicaciones a canales y desactivación de canales.
 ## Limitaciones conocidas
 
 - **Rueda física de ChatMix** del casco: llega vía SteelSeries Engine, que no se ejecuta.
-- Las 10 bandas del ecualizador paramétrico aún no se editan (se conservan las de cada preset).
+- La curva del ecualizador no incluye los refuerzos de graves, voz y agudos: el APO los aplica
+  aparte y su forma no se conoce.
 - El enrutado por app es solo de salida (no micrófono).
 
 ## Estructura
