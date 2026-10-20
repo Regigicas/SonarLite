@@ -220,67 +220,8 @@ public sealed class ChannelViewModel : ObservableObject
     }
 }
 
-public sealed record ChannelOption(string Role, string Name, string DeviceId);
-
-public sealed class AppViewModel : ObservableObject
+public sealed partial class MainViewModel : ObservableObject
 {
-    private readonly MainViewModel _owner;
-    private bool _fromServer;
-    private ChannelOption? _channel;
-    private string _deviceName = "";
-
-    public AppViewModel(MainViewModel owner, uint processId, string name)
-    {
-        _owner = owner;
-        ProcessId = processId;
-        Name = name;
-    }
-
-    public uint ProcessId { get; }
-    public string Name { get; }
-
-    /// <summary>Endpoint the app currently plays on, when it is not a Sonar channel.</summary>
-    public string DeviceName
-    {
-        get => _deviceName;
-        set => SetProperty(ref _deviceName, value);
-    }
-
-    public IReadOnlyList<ChannelOption> Options => _owner.ChannelOptions;
-
-    public ChannelOption? Channel
-    {
-        get => _channel;
-        set
-        {
-            if (!SetProperty(ref _channel, value) || _fromServer || value is null || _owner.Client is null)
-                return;
-            _owner.Run(async c =>
-            {
-                await c.RouteProcessAsync("render", value.DeviceId, ProcessId);
-                await _owner.RefreshRoutingAsync();
-            });
-        }
-    }
-
-    internal void Apply(ChannelOption? channel, string deviceName)
-    {
-        _fromServer = true;
-        try
-        {
-            Channel = channel;
-            DeviceName = channel is null ? deviceName : "";
-        }
-        finally
-        {
-            _fromServer = false;
-        }
-    }
-}
-
-public sealed class MainViewModel : ObservableObject
-{
-    private static readonly string[] AppChannelRoles = ["game", "chatRender", "media", "aux"];
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 
@@ -317,13 +258,13 @@ public sealed class MainViewModel : ObservableObject
         _chatMixSender = new LatestValueSender<double>(v => Client!.SetChatMixAsync(v / 100.0), ReportError);
         _pollTimer = new DispatcherTimer(PollInterval, DispatcherPriority.Background, async (_, _) => await PollAsync(), dispatcher);
         _pollTimer.Stop();
+        InitializeApps();
     }
 
     internal SonarClient? Client { get; private set; }
 
     public ChannelViewModel Master { get; }
     public IReadOnlyList<ChannelViewModel> Channels { get; }
-    public ObservableCollection<AppViewModel> Apps { get; } = [];
 
     public IReadOnlyList<ChannelOption> ChannelOptions
     {
@@ -461,16 +402,6 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    internal async Task RefreshRoutingAsync()
-    {
-        var client = Client;
-        if (client is null)
-            return;
-        var routing = await client.GetRoutingAsync();
-        var devices = await client.GetAudioDevicesAsync();
-        ApplyRouting(routing, devices);
-    }
-
     private async Task PollAsync()
     {
         var client = Client;
@@ -507,6 +438,14 @@ public sealed class MainViewModel : ObservableObject
             if (mix != null)
                 _dispatcher.InvokeAsync(() => ApplyChatMix(mix));
             return;
+        }
+        if (ev.Name == "SONAR_EVENT_AUDIO_SESSION_OPENED_DATA")
+        {
+            // Routing rules must react right away (even with the window closed): this is
+            // the moment an app can still be moved before it settles on a device.
+            var opened = ev.Data.Deserialize<DeviceSessions>(WebJson);
+            if (opened != null)
+                _dispatcher.InvokeAsync(() => Router.OnSessionOpenedAsync(opened));
         }
         // Anything else (volumes, routing, presets, devices) triggers one coalesced refresh.
         if (!_isVisible || _refreshQueued)
@@ -569,54 +508,4 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private void ApplyRouting(IReadOnlyList<DeviceSessions> routing, IReadOnlyList<AudioDevice> devices)
-    {
-        var options = AppChannelRoles
-            .Select(role => routing.FirstOrDefault(d => d.DataFlow == "render" && d.Role == role))
-            .Where(d => d != null)
-            .Select(d => new ChannelOption(d!.Role, Channels.First(c => c.VolumeRole == d.Role).DisplayName, d.DeviceId))
-            .ToList();
-        if (!options.Select(o => o.DeviceId).SequenceEqual(ChannelOptions.Select(o => o.DeviceId)))
-            ChannelOptions = options;
-
-        // A process can have sessions on several endpoints; the active one (or a Sonar channel) wins.
-        var current = new Dictionary<uint, (AudioSession Session, DeviceSessions Device)>();
-        foreach (var device in routing.Where(d => d.DataFlow == "render"))
-        {
-            foreach (var s in device.AudioSessions)
-            {
-                if (s.IsSystemSound || s.ProcessId == 0 || s.State == "expired")
-                    continue;
-                if (!current.TryGetValue(s.ProcessId, out var existing) || Rank(s, device) > Rank(existing.Session, existing.Device))
-                    current[s.ProcessId] = (s, device);
-            }
-        }
-
-        foreach (var app in Apps.Where(a => !current.ContainsKey(a.ProcessId)).ToList())
-            Apps.Remove(app);
-
-        foreach (var (pid, (session, device)) in current.OrderBy(kv => kv.Value.Session.DisplayName, StringComparer.CurrentCultureIgnoreCase))
-        {
-            var app = Apps.FirstOrDefault(a => a.ProcessId == pid);
-            if (app is null)
-            {
-                app = new AppViewModel(this, pid, string.IsNullOrWhiteSpace(session.DisplayName) ? session.ProcessName : session.DisplayName);
-                InsertSorted(app);
-            }
-            var channel = options.FirstOrDefault(o => o.DeviceId == device.DeviceId);
-            var deviceName = devices.FirstOrDefault(d => d.Id == device.DeviceId)?.FriendlyName ?? "otro dispositivo";
-            app.Apply(channel, deviceName);
-        }
-
-        int Rank(AudioSession s, DeviceSessions d) =>
-            (s.State == "active" ? 2 : 0) + (AppChannelRoles.Contains(d.Role) ? 1 : 0);
-    }
-
-    private void InsertSorted(AppViewModel app)
-    {
-        int i = 0;
-        while (i < Apps.Count && string.Compare(Apps[i].Name, app.Name, StringComparison.CurrentCultureIgnoreCase) < 0)
-            i++;
-        Apps.Insert(i, app);
-    }
 }

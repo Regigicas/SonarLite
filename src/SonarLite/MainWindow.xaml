@@ -122,7 +122,19 @@
             <TabItem Header="Aplicaciones">
                 <DockPanel Margin="0,8,0,0">
                     <TextBlock DockPanel.Dock="Top" Margin="4,0,4,8" Opacity="0.75" TextWrapping="Wrap"
-                               Text="Aplicaciones con una sesión de audio abierta. Elige a qué canal de Sonar va cada una." />
+                               Text="Elige a qué canal de Sonar va cada aplicación. En las que no tienen audio ahora, el cambio se aplica en cuanto vuelvan a sonar. «Siempre» lo reaplica en cada arranque (útil si la app cambia de ruta al actualizarse, como Discord)." />
+
+                    <!-- Add an app that has never played audio yet -->
+                    <DockPanel DockPanel.Dock="Bottom" Margin="4,8,4,0">
+                        <TextBlock DockPanel.Dock="Left" Text="Añadir app (nombre del proceso):" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <Button DockPanel.Dock="Right" Content="Añadir" Margin="8,0,0,0" Command="{Binding AddAppCommand}" />
+                        <TextBox Text="{Binding NewAppName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Por ejemplo: Discord o Discord.exe">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding AddAppCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </DockPanel>
+
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding Apps}">
                             <ItemsControl.ItemTemplate>
@@ -134,14 +146,34 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="36" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"
-                                                       TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Grid.Column="1" Text="{Binding DeviceName}" VerticalAlignment="Center"
-                                                       Margin="8,0,12,0" Opacity="0.6" TextTrimming="CharacterEllipsis" MaxWidth="260" />
+                                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding Name}" ToolTip="{Binding ProcessName}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                <Setter Property="Opacity" Value="0.6" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="1" Text="{Binding Detail}" VerticalAlignment="Center"
+                                                       Margin="8,0,12,0" Opacity="0.6" TextTrimming="CharacterEllipsis" MaxWidth="320"
+                                                       ToolTip="{Binding Detail}" />
                                             <ComboBox Grid.Column="2" ItemsSource="{Binding Options}" DisplayMemberPath="Name"
                                                       SelectedItem="{Binding Channel}" />
+                                            <CheckBox Grid.Column="3" Content="Siempre" Margin="12,0,0,0" IsChecked="{Binding IsAlways}"
+                                                      ToolTip="Volver a poner la app en este canal cada vez que empiece a sonar" />
+                                            <Button Grid.Column="4" Margin="4,0,0,0" Padding="6,2" Command="{Binding RemoveRuleCommand}"
+                                                    ToolTip="{Binding RemoveTooltip}"
+                                                    Visibility="{Binding CanRemove, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Style="{StaticResource IconFont}" FontSize="12" Text="&#xE711;" />
+                                            </Button>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

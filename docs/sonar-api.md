@@ -68,6 +68,25 @@ Valores de enums (se aceptan en camelCase):
 | PUT | `/AudioDeviceRouting/{dataFlow}/{deviceId}/{processId}` (deviceId = endpoint virtual de Sonar) |
 | GET | `/AudioDeviceRouting/{dataFlow}/{processId}` → endpoint actual del proceso |
 
+Notas sobre el enrutado (verificado):
+- Sonar usa `IAudioPolicyConfig::SetPersistedDefaultAudioEndpoint` (roles Multimedia y Console),
+  la misma preferencia que "Volumen de la aplicación y preferencias de dispositivo" de Windows.
+- Windows la guarda **por ruta del ejecutable** (`HKCU\Software\Microsoft\Internet Explorer\
+  LowRegistry\Audio\PolicyConfig\PropertyStore`), así que sobrevive a reinicios de la app pero
+  se pierde si la ruta cambia (p. ej. Discord en cada actualización).
+- Con un proceso que aún no ha inicializado audio, la llamada devuelve 204 pero Windows la
+  ignora: el primer momento útil es la apertura de la sesión de audio.
+- Si la app ya tiene el stream abierto, puede no moverse hasta reiniciarse.
+- `/sock` emite `SONAR_EVENT_AUDIO_SESSION_OPENED_DATA` / `..._CLOSED_DATA` con el mismo
+  formato que un elemento de `GET /AudioDeviceRouting`.
+
+### Volumen en dB
+
+Cada canal es el volumen escalar del endpoint virtual (`SetMasterVolumeLevelScalar`, rango
+[-96, 0] dB por software). La conversión sigue la curva "audio taper" de Windows, no 20·log10:
+0,5 → -10,5 dB; 0,02 → -58,2 dB. Tabla medida en `src/SonarLite.Core/VolumeCurve.cs`.
+El master no es un endpoint: reescala proporcionalmente los canales.
+
 ### Dispositivo físico de salida por canal
 | Método | Ruta |
 |---|---|

@@ -22,14 +22,25 @@ scripts\publish.ps1        # compila y publica en %LOCALAPPDATA%\Programs\SonarL
   instancia en marcha limpiamente.
 - Logs: `%LOCALAPPDATA%\SonarLite\logs\` (`sonarlite.log` y `sonar.log`).
 
-Funciones: volumen y mute de master y de los 5 canales, ChatMix, dispositivo físico de cada
-canal, preset de EQ por canal y enrutado de aplicaciones a canales.
+Funciones: volumen y mute de master y de los 5 canales (en % o en dB reales), ChatMix,
+dispositivo físico de cada canal, preset de EQ por canal y enrutado de aplicaciones a canales.
+
+### Enrutado de aplicaciones
+
+- La pestaña "Aplicaciones" lista las apps que suenan ahora y las que han sonado antes (o que
+  añadas por nombre de proceso).
+- En una app **sin audio**, elegir canal deja un cambio pendiente: se aplica en cuanto la app abra
+  su sesión de audio, que es el primer momento en que Windows acepta el cambio.
+- Algunas apps no se mueven mientras suenan; la fila lo indica y Windows aplicará el canal al
+  reiniciarlas (lo recuerda por ruta del ejecutable).
+- **Siempre**: reaplica el canal en cada arranque. Útil para apps que cambian de ruta al
+  actualizarse (Discord instala cada versión en `app-x.y.z`, y Windows pierde el canal).
 
 ## Limitaciones conocidas
 
 - **Rueda física de ChatMix** del casco: llega vía SteelSeries Engine, que no se ejecuta.
 - La edición detallada de EQ se hace desde GG (aquí solo se eligen presets).
-- Solo aparecen en "Aplicaciones" las apps con una sesión de audio abierta en Windows.
+- El enrutado por app es solo de salida (no micrófono).
 
 ## Estructura
 
