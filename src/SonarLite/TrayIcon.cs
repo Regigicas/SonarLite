@@ -27,7 +27,7 @@ internal sealed class TrayIcon : IDisposable
         _image = CreateIcon();
 
         // Not IsCheckable: the Fluent template would then reserve a check-box column on every
-        // item. The tick goes in the icon column instead, like Windows 11's own menus.
+        // item. The state is shown with a check-box glyph in the icon column instead.
         _autostartItem = CreateItem("Iniciar con Windows (en lugar de GG)", null, () =>
         {
             if (Autostart.IsEnabled)
@@ -79,7 +79,8 @@ internal sealed class TrayIcon : IDisposable
 
     private void ShowMenu()
     {
-        _autostartItem.Icon = Autostart.IsEnabled ? Glyph("") : null;
+        // Checked / empty check-box glyphs, so the option reads as a toggle in both states.
+        _autostartItem.Icon = Glyph(Autostart.IsEnabled ? "" : "");
 
         // A WPF popup only closes on an outside click if one of our windows is in the
         // foreground, so the menu is owned by an invisible 1x1 window placed at the cursor
