@@ -11,6 +11,8 @@ la app hace de "GG" para Sonar y ofrece su propia interfaz en la bandeja del sis
 
 ![Mezclador](docs/img/mezclador.png)
 
+![Editor de presets](docs/img/presets.png)
+
 ![Enrutado de aplicaciones](docs/img/aplicaciones.png)
 
 ## Requisitos
@@ -32,8 +34,19 @@ scripts\publish.ps1        # compila y publica en %LOCALAPPDATA%\Programs\SonarL
 - Logs: `%LOCALAPPDATA%\SonarLite\logs\` (`sonarlite.log` y `sonar.log`).
 
 Funciones: volumen y mute de master y de los 5 canales (en % o en dB reales), ChatMix,
-dispositivo físico de cada canal, preset de EQ por canal, enrutado de aplicaciones a canales y
-desactivación de canales.
+dispositivo físico de cada canal, preset de EQ por canal, edición y gestión de presets, enrutado
+de aplicaciones a canales y desactivación de canales.
+
+### Presets
+
+- La pestaña "Presets" edita el preset seleccionado del canal elegido. Los cambios se aplican y se
+  guardan al momento, como en GG.
+- Juego, Media y Aux: ecualizador con graves, voz y agudos, audio espacial (auriculares o
+  altavoces), aumento de volumen y Smart Volume.
+- Chat y Micrófono: ecualizador, cancelación de ruido IA (ClearCast), reducción de ruido de fondo
+  y de impactos, puerta de ruido (con umbral automático) y estabilizador de volumen.
+- Nuevo, Duplicar, Renombrar, Restablecer, Borrar y favorito (★, salen primero en las listas).
+  Los presets de SteelSeries se pueden editar y restablecer, pero no renombrar ni borrar.
 
 ### Desactivar canales
 
@@ -58,7 +71,7 @@ desactivación de canales.
 ## Limitaciones conocidas
 
 - **Rueda física de ChatMix** del casco: llega vía SteelSeries Engine, que no se ejecuta.
-- La edición detallada de EQ se hace desde GG (aquí solo se eligen presets).
+- Las 10 bandas del ecualizador paramétrico aún no se editan (se conservan las de cada preset).
 - El enrutado por app es solo de salida (no micrófono).
 
 ## Estructura
