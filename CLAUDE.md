@@ -61,6 +61,9 @@ Three projects in `SonarLite.slnx`:
     (each change is a `PUT` of the whole config) and creates, renames, resets and deletes presets
     following GG's rules. Settings are bound to dotted paths in `data`; the ranges come from GG's
     UI (see `docs/sonar-api.md`). Never delete a built-in preset: Sonar can't recreate it.
+    The 10 EQ bands are `EqBand` rows. `EqCurve` is a plain `FrameworkElement` that draws their
+    summed RBJ biquad response in `OnRender` and handles point dragging; it listens to the bands
+    through weak events, because the view model outlives the window.
   - `AppRouter` applies saved routing rules when Sonar raises
     `SONAR_EVENT_AUDIO_SESSION_OPENED_DATA`. Windows ignores per-app endpoint changes until the
     process has opened audio, and it stores the choice per executable path.
