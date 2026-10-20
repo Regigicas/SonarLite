@@ -22,7 +22,8 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
-        <!-- One mixer column: name, value, slider, mute, output device, preset. -->
+        <!-- One mixer column: name, value, slider, mute, output device, preset.
+             Combo items trim with an ellipsis: device names and translations vary in length. -->
         <DataTemplate x:Key="ChannelTemplate" DataType="{x:Type local:ChannelViewModel}">
             <Border Width="130" Margin="4" Padding="8" CornerRadius="6"
                     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
@@ -33,13 +34,25 @@
                                Text="{Binding VolumeText}" />
 
                     <ComboBox DockPanel.Dock="Bottom" Margin="0,6,0,0" ItemsSource="{Binding Presets}"
-                              SelectedItem="{Binding SelectedPreset}" DisplayMemberPath="Name"
+                              SelectedItem="{Binding SelectedPreset}"
                               ToolTip="Preset de ecualización" MaxDropDownHeight="420"
-                              Visibility="{Binding IsMaster, Converter={StaticResource InverseBoolToVisibility}}" />
+                              Visibility="{Binding IsMaster, Converter={StaticResource InverseBoolToVisibility}}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <ComboBox DockPanel.Dock="Bottom" Margin="0,6,0,0" ItemsSource="{Binding Devices}"
-                              SelectedItem="{Binding SelectedDevice}" DisplayMemberPath="FriendlyName"
+                              SelectedItem="{Binding SelectedDevice}"
                               ToolTip="{Binding SelectedDevice.FriendlyName}"
-                              Visibility="{Binding IsMaster, Converter={StaticResource InverseBoolToVisibility}}" />
+                              Visibility="{Binding IsMaster, Converter={StaticResource InverseBoolToVisibility}}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding FriendlyName}" TextTrimming="CharacterEllipsis" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <ToggleButton DockPanel.Dock="Bottom" Margin="0,8,0,0" HorizontalAlignment="Center"
                                   IsChecked="{Binding Muted}" ToolTip="Silenciar">
                         <Grid>
