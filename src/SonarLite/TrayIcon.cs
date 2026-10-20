@@ -26,14 +26,15 @@ internal sealed class TrayIcon : IDisposable
     {
         _image = CreateIcon();
 
+        // Not IsCheckable: the Fluent template would then reserve a check-box column on every
+        // item. The tick goes in the icon column instead, like Windows 11's own menus.
         _autostartItem = CreateItem("Iniciar con Windows (en lugar de GG)", null, () =>
         {
-            if (_autostartItem!.IsChecked)
-                Autostart.Enable();
-            else
+            if (Autostart.IsEnabled)
                 Autostart.Disable();
+            else
+                Autostart.Enable();
         });
-        _autostartItem.IsCheckable = true;
 
         _menu = new ContextMenu();
         _menu.Items.Add(CreateItem("Abrir", "", open));
@@ -78,7 +79,7 @@ internal sealed class TrayIcon : IDisposable
 
     private void ShowMenu()
     {
-        _autostartItem.IsChecked = Autostart.IsEnabled;
+        _autostartItem.Icon = Autostart.IsEnabled ? Glyph("") : null;
 
         // A WPF popup only closes on an outside click if one of our windows is in the
         // foreground, so the menu is owned by an invisible 1x1 window placed at the cursor
@@ -111,19 +112,17 @@ internal sealed class TrayIcon : IDisposable
 
     private static MenuItem CreateItem(string header, string? glyph, Action onClick)
     {
-        var item = new MenuItem { Header = header };
-        if (glyph != null)
-        {
-            item.Icon = new TextBlock
-            {
-                Text = glyph,
-                FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-                FontSize = 14,
-            };
-        }
+        var item = new MenuItem { Header = header, Icon = glyph is null ? null : Glyph(glyph) };
         item.Click += (_, _) => onClick();
         return item;
     }
+
+    private static TextBlock Glyph(string glyph) => new()
+    {
+        Text = glyph,
+        FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+        FontSize = 14,
+    };
 
     /// <summary>Simple sound-wave glyph, drawn at runtime so the app needs no binary assets.</summary>
     private static Drawing.Icon CreateIcon()
