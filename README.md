@@ -9,6 +9,11 @@ la app hace de "GG" para Sonar y ofrece su propia interfaz en la bandeja del sis
 | Procesos | 5 | 2 (SonarLite + SteelSeriesSonar) |
 | RAM (working set) | ~900 MB | ~120 MB en reposo |
 
+## Requisitos
+
+- Windows 10/11 con **SteelSeries GG instalado** (Sonar Lite usa su `SteelSeriesSonar.exe`, su driver y su APO).
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) para compilar.
+
 ## Uso
 
 ```powershell
@@ -49,3 +54,13 @@ dispositivo físico de cada canal, preset de EQ por canal y enrutado de aplicaci
 - `src/FakeGG` + `scripts/*-headless.ps1` — modo sin interfaz, para pruebas.
 - `docs/sonar-api.md` — arquitectura de Sonar y mapa de su API.
 - `_decompiled/` — referencia local del código de SteelSeries (ignorado por git, no redistribuir).
+
+## Aviso
+
+Proyecto no oficial, sin relación con SteelSeries ni respaldado por ella. "SteelSeries", "GG" y
+"Sonar" son marcas de sus respectivos propietarios. Este repositorio no incluye ni redistribuye
+software de SteelSeries; necesita una instalación existente de GG.
+
+## Licencia
+
+[MIT](LICENSE).
