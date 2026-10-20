@@ -174,6 +174,23 @@ Ajustes de `data` y rangos de la interfaz de GG:
 | | `volumeStabilizerState` `{enabled, value}` | 0–1 |
 | chatCapture | `acousticEchoCancelingState` | solo con la función desbloqueada |
 
+Ecualizador paramétrico (`parametricEQ`), verificado contra el proceso con un preset de prueba:
+- Cada `filterN` es `{enabled, frequency, gain, qFactor, type}`. Un `PUT /configs` con bandas
+  modificadas se aplica al momento si el preset está seleccionado, y se guarda tal cual
+  (por ejemplo 182,5 Hz o Q 1,87).
+- `type` admite los 10 valores de `Filter.FilterType` de Sonar: `byPass`, `lowPass`, `highPass`,
+  `bandPassPeakQ`, `bandPassPeak0dB`, `notchFilter`, `allPass`, `peakingEQ`, `lowShelving` y
+  `highShelving`. La interfaz de GG solo ofrece seis (`peakingEQ`, `lowShelving`, `highShelving`,
+  `lowPass`, `highPass`, `notchFilter`), y son también los únicos que usan los presets de
+  SteelSeries (en `game`: unos 3300 `peakingEQ`, 64 `highPass`, 49 `highShelving`, 6
+  `lowShelving`, 5 `lowPass` y 1 `notchFilter`).
+- Los presets de SteelSeries cubren todo el rango de GG (20–20000 Hz, ±12 dB, Q 0,5–10). Los
+  valores neutros de `game` (los de `POST /configs` sin `data`) son 10 campanas con ganancia 0 y
+  Q 0,7071, de las que solo están activas las 5 primeras (35, 120, 1000, 6000 y 18000 Hz).
+- La ganancia solo influye en campana y estantes. Los refuerzos de graves, voz y agudos no son
+  bandas: Sonar los pasa al APO como ajustes propios (`kSet_BassBoostGainDB`, …), así que la
+  forma de su filtro no se ve desde la API.
+
 GG muestra la intensidad de ClearCast en porcentaje logarítmico:
 `% = 100 · 10^((60·v − 60) / 20)`, de modo que el valor por defecto 0,9 se ve como 50 %.
 
