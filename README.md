@@ -32,7 +32,17 @@ scripts\publish.ps1        # compila y publica en %LOCALAPPDATA%\Programs\SonarL
 - Logs: `%LOCALAPPDATA%\SonarLite\logs\` (`sonarlite.log` y `sonar.log`).
 
 Funciones: volumen y mute de master y de los 5 canales (en % o en dB reales), ChatMix,
-dispositivo físico de cada canal, preset de EQ por canal y enrutado de aplicaciones a canales.
+dispositivo físico de cada canal, preset de EQ por canal, enrutado de aplicaciones a canales y
+desactivación de canales.
+
+### Desactivar canales
+
+- Las casillas **Canales: Media / Aux** de la barra inferior activan o desactivan esos canales,
+  igual que en GG (Juego, Chat y Micrófono no se pueden desactivar).
+- Un canal desactivado desaparece del mezclador, de la lista de canales de "Aplicaciones" y del
+  panel de sonido de Windows (Sonar oculta su dispositivo virtual).
+- Sonar lo guarda en su base de datos y lo respeta al reiniciarse; también si el dispositivo se
+  desactiva desde el panel de sonido de Windows.
 
 ### Enrutado de aplicaciones
 
@@ -50,12 +60,6 @@ dispositivo físico de cada canal, preset de EQ por canal y enrutado de aplicaci
 - **Rueda física de ChatMix** del casco: llega vía SteelSeries Engine, que no se ejecuta.
 - La edición detallada de EQ se hace desde GG (aquí solo se eligen presets).
 - El enrutado por app es solo de salida (no micrófono).
-
-## Pendiente
-
-- **Desactivar canales**: Sonar permite deshabilitar todos los canales salvo Juego, Chat y
-  Micrófono (es decir, Media y Aux). Investigar cómo lo hace (API REST o configuración) y
-  ofrecerlo aquí, ocultando los canales desactivados en el mezclador y en el enrutado de apps.
 
 ## Estructura
 
