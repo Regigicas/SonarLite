@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SonarLite"
         Title="Sonar Lite"
+        Icon="app.ico"
         Width="940" Height="600" MinWidth="700" MinHeight="460"
         WindowStartupLocation="Manual"
         ShowInTaskbar="True">

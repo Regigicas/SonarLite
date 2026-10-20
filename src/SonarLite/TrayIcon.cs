@@ -1,4 +1,3 @@
-using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,7 +23,7 @@ internal sealed class TrayIcon : IDisposable
 
     public TrayIcon(Action open, Func<Task> restartSonar, Func<Task> switchToGg, Func<Task> exit)
     {
-        _image = CreateIcon();
+        _image = LoadIcon();
 
         // Not IsCheckable: the Fluent template would then reserve a check-box column on every
         // item. The state is shown with a check-box glyph in the icon column instead.
@@ -60,8 +59,6 @@ internal sealed class TrayIcon : IDisposable
                 ShowMenu();
         };
     }
-
-    public Drawing.Icon Image => _image;
 
     public string Tooltip
     {
@@ -125,25 +122,11 @@ internal sealed class TrayIcon : IDisposable
         FontSize = 14,
     };
 
-    /// <summary>Simple sound-wave glyph, drawn at runtime so the app needs no binary assets.</summary>
-    private static Drawing.Icon CreateIcon()
+    /// <summary>Loads app.ico at the tray's icon size (it has a frame per size, see scripts/make-icon.ps1).</summary>
+    private static Drawing.Icon LoadIcon()
     {
-        using var bmp = new Drawing.Bitmap(32, 32);
-        using (var g = Drawing.Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Drawing.Color.Transparent);
-            using var bg = new Drawing.SolidBrush(Drawing.Color.FromArgb(255, 255, 106, 0));
-            g.FillEllipse(bg, 1, 1, 30, 30);
-            using var pen = new Drawing.Pen(Drawing.Color.White, 3f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            int[] heights = [6, 14, 20, 14, 6];
-            for (int i = 0; i < heights.Length; i++)
-            {
-                float x = 8 + i * 4;
-                g.DrawLine(pen, x, 16 - heights[i] / 2f, x, 16 + heights[i] / 2f);
-            }
-        }
-        return Drawing.Icon.FromHandle(bmp.GetHicon());
+        using var stream = Application.GetResourceStream(new Uri("pack://application:,,,/app.ico")).Stream;
+        return new Drawing.Icon(stream, Forms.SystemInformation.SmallIconSize);
     }
 
     private const uint SwpNoZOrder = 0x0004;

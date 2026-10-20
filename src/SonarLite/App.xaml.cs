@@ -1,7 +1,5 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media.Imaging;
 using Microsoft.Extensions.Logging;
 using SonarLite.Core;
 
@@ -102,10 +100,7 @@ public partial class App : System.Windows.Application
             return;
         if (_window is null)
         {
-            _window = new MainWindow(_vm!)
-            {
-                Icon = Imaging.CreateBitmapSourceFromHIcon(_tray!.Image.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions()),
-            };
+            _window = new MainWindow(_vm!);
             _window.Closed += OnWindowClosed;
             _vm!.SetVisible(true);
         }
