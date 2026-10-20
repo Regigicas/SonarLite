@@ -118,9 +118,64 @@ Es lo que usa GG para desactivar canales. Verificado:
 ### Presets / EQ
 | Método | Ruta |
 |---|---|
-| GET | `/configs`, `/configs/selected`, `/configs/options`, `/presets/{vad}` |
+| GET | `/configs?vad={vad}` (todos los del dispositivo), `/configs/selected` (el seleccionado de cada uno), `/configs/options`, `/presets/{vad}` |
 | PUT | `/configs/{id}/select` |
-| POST/PUT/DELETE | `/configs` (crear / modificar / borrar) |
+| POST | `/configs` (crear) · `/configs/{id}/isFavorite/{bool}` · `/configs/{id}/setFavoritePosition/{0..8}` |
+| PUT | `/configs` (modificar: config completo en el cuerpo) |
+| DELETE | `/configs/{id}` |
+
+vad: `game`, `chatRender`, `chatCapture`, `media`, `aux`. Un config (preset) es
+`{id, name, virtualAudioDevice, schemaVersion, isPreset, image, isFavorite, favoritePosition,
+data, defaultData, …}`. `data` son los ajustes de efectos y `defaultData`, los de restablecer. Los
+presets de SteelSeries (`isPreset: true`) vienen de las migraciones SQL de Sonar (unos 345 en
+`game`), así que `GET /configs?vad=game` pesa del orden de 1 MB.
+
+Verificado contra el proceso:
+- `PUT /configs` reemplaza el config entero. `schemaVersion` debe ser la actual (o `-1`). Si el
+  config está seleccionado, Sonar lo aplica al momento. El `updatedAt` de la respuesta es el
+  anterior, aunque se guarda bien.
+- `POST /configs` ignora el `id` y crea uno nuevo. Pone `isFavorite: false`. Sin `image`, pone
+  el icono por defecto del dispositivo (`8.svg` en game). Sin `data` (y con `schemaVersion: -1`),
+  usa los valores neutros de Sonar, que también pasan a ser su `defaultData`.
+- `DELETE /configs/{id}`: si estaba seleccionado, Sonar selecciona el preset por defecto del
+  dispositivo ("Flat" en game). **No protege los presets de SteelSeries**: borrar uno es
+  definitivo, porque solo las migraciones los insertan y no se vuelven a crear.
+- Favoritos: máximo 9 por dispositivo (`/configs/options` → `isFavoriteLimitReached`). Por
+  encima del límite, la petición se ignora sin error.
+- La interfaz de GG no se refresca si el preset seleccionado cambia por la API.
+
+En el código no hay eventos `/sock` de altas, bajas ni renombrados (solo
+`SONAR_EVENT_FAVORITE_CONFIGS_UPDATED`), así que el cliente debe releer la lista tras cambiarla.
+
+Cómo lo hace GG (y SonarLite igual):
+- Edita el preset seleccionado en el sitio, también los de SteelSeries; cada cambio es un `PUT`.
+- "Restablecer" copia `defaultData` en `data`.
+- "Duplicar" hace un `POST` con el `data` del original y el nombre `"<nombre> *"` (añade `" *"`
+  hasta que quede libre), y lo selecciona. La copia de un preset de SteelSeries lleva el icono por
+  defecto del dispositivo, y su `defaultData` son los valores neutros, no los del original.
+- No deja renombrar ni borrar presets de SteelSeries, ni borrar el último preset propio de un
+  dispositivo. Los nombres no se repiten por dispositivo.
+- Liga `bassBoostState` / `voiceClarityState` / `trebleBoostState`.`enabled` a
+  `parametricEQ.enabled` (al cambiar el EQ o el valor de un refuerzo).
+
+Ajustes de `data` y rangos de la interfaz de GG:
+
+| Dispositivo | Ruta en `data` | Rango |
+|---|---|---|
+| game, media, aux | `parametricEQ.enabled`, `parametricEQ.filter1..10` `{enabled, frequency, gain, qFactor, type}` | 20–20000 Hz, ±12 dB, Q 0,5–10 |
+| | `bassBoostState` / `voiceClarityState` / `trebleBoostState` `{enabled, value}` | ±12 dB |
+| | `virtualSurroundState`, `formFactor` (`headphones` / `speakers`), `reverbGainDB`, `virtualSurroundChannels.*` | |
+| | `generalGain` | 0–12 dB |
+| | `smartVolume` `{enabled, volumeLevel, loudness}` | nivel 0–1 |
+| chatRender, chatCapture | `parametricEQ.*` (sin refuerzos) | como arriba |
+| | `noiseCancelingState` `{enabled, value}` (ClearCast IA) | 0–1, ver abajo |
+| | `noiseReductionState`, `impactNoiseReductionState` `{enabled, value}` | 0–1; GG los desactiva con ClearCast activo |
+| | `noiseGateState` `{enabled, value}`, `automaticNoiseGateState.enabled` | −60 a −10 dB; el automático ignora el umbral |
+| | `volumeStabilizerState` `{enabled, value}` | 0–1 |
+| chatCapture | `acousticEchoCancelingState` | solo con la función desbloqueada |
+
+GG muestra la intensidad de ClearCast en porcentaje logarítmico:
+`% = 100 · 10^((60·v − 60) / 20)`, de modo que el valor por defecto 0,9 se ve como 50 %.
 
 ### Otros
 `/mode` (GET, PUT `/{id}`), `/audioDevices`, `/linkAll`, `/fallbackSettings/*`,
