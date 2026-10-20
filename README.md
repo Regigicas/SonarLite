@@ -51,6 +51,12 @@ dispositivo físico de cada canal, preset de EQ por canal y enrutado de aplicaci
 - La edición detallada de EQ se hace desde GG (aquí solo se eligen presets).
 - El enrutado por app es solo de salida (no micrófono).
 
+## Pendiente
+
+- **Desactivar canales**: Sonar permite deshabilitar todos los canales salvo Juego, Chat y
+  Micrófono (es decir, Media y Aux). Investigar cómo lo hace (API REST o configuración) y
+  ofrecerlo aquí, ocultando los canales desactivados en el mezclador y en el enrutado de apps.
+
 ## Estructura
 
 - `src/SonarLite.Core` — `GgHost` (GG mínimo), `SonarProcess` (lanza/vigila Sonar), `SonarClient` (API REST).
