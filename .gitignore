@@ -6,3 +6,6 @@ obj/
 *.user
 .vs/
 logs/
+*.DotSettings.user
+.idea/
+.vscode/
