@@ -44,6 +44,8 @@ Three projects in `SonarLite.slnx`:
     folder, which Sonar needs for its relative paths. It waits for "ready", then restarts Sonar if
     it crashes (at most 3 times in 2 minutes). Both output pipes must be drained continuously.
   - `SonarClient` is the typed client for Sonar's REST API and its `/sock` event websocket.
+    `SonarConfig` keeps a preset as raw JSON, because `PUT /configs` replaces the whole config
+    and must send back fields this client doesn't model.
   - `VolumeCurve` holds a measured table of the Windows audio taper, used for the dB display. It
     is not 20·log10.
 - **`SonarLite`** (net10.0-windows, WPF tray app; WinForms is used only for `NotifyIcon`):
@@ -55,6 +57,10 @@ Three projects in `SonarLite.slnx`:
     enable/disable) and `AppsViewModel.cs` (per-app routing). It polls every 2 s, but only while
     the window is visible. It also listens to Sonar's `/sock` events at all times.
     `LatestValueSender` sends only the latest slider value, with at most one request in flight.
+  - `PresetEditorViewModel` drives the "Presets" tab: it edits the selected preset of one channel
+    (each change is a `PUT` of the whole config) and creates, renames, resets and deletes presets
+    following GG's rules. Settings are bound to dotted paths in `data`; the ranges come from GG's
+    UI (see `docs/sonar-api.md`). Never delete a built-in preset: Sonar can't recreate it.
   - `AppRouter` applies saved routing rules when Sonar raises
     `SONAR_EVENT_AUDIO_SESSION_OPENED_DATA`. Windows ignores per-app endpoint changes until the
     process has opened audio, and it stores the choice per executable path.
