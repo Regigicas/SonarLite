@@ -156,6 +156,9 @@ public sealed partial class MainViewModel
             role => ChannelOptions.FirstOrDefault(o => o.Role == role)?.DeviceId);
         Router.RulesChanged += RebuildApps;
         Router.RuleApplied += (processName, role) => _ = CheckAppMovedAsync(processName, role);
+        // Older versions remembered Sonar's own "Unknown" streams as an app.
+        if (_settings.Current.KnownApps.RemoveAll(k => IsUnresolvedProcess(k.ProcessName)) > 0)
+            _settings.Save();
         RebuildApps();
     }
 
@@ -369,7 +372,9 @@ public sealed partial class MainViewModel
                 if (app.HintTargetRole != null && channel?.Role == app.HintTargetRole)
                     app.Hint = app.HintTargetRole = null;
                 string detail = app.Hint
-                    ?? (channel is null ? _lastDevices.FirstOrDefault(d => d.Id == main.Device.DeviceId)?.FriendlyName ?? "otro dispositivo" : "");
+                    ?? (channel is null
+                        ? "Fuera de Sonar · " + (_lastDevices.FirstOrDefault(d => d.Id == main.Device.DeviceId)?.FriendlyName ?? "otro dispositivo")
+                        : "");
                 var pids = sessions.Select(x => x.Session.ProcessId).Distinct().ToList();
                 app.Update(true, pids, channel, detail, rule?.Always == true, hasPendingRule: rule is { Always: false });
             }
@@ -390,7 +395,16 @@ public sealed partial class MainViewModel
     private static IEnumerable<(AudioSession Session, DeviceSessions Device)> ActiveSessions(IReadOnlyList<DeviceSessions> routing) =>
         routing.Where(d => d.DataFlow == "render")
             .SelectMany(d => d.AudioSessions.Select(s => (Session: s, Device: d)))
-            .Where(x => !x.Session.IsSystemSound && x.Session.ProcessId != 0 && x.Session.State != "expired");
+            .Where(x => !x.Session.IsSystemSound && x.Session.ProcessId != 0 && x.Session.State != "expired"
+                && !IsUnresolvedProcess(x.Session.ProcessName));
+
+    /// <summary>
+    /// Sonar reports "Unknown" when it cannot resolve the owning process. In practice these are
+    /// Sonar's own streams carrying each channel to the physical device (one per redirection,
+    /// owned by audiodg): not an app, and nothing that can be routed.
+    /// </summary>
+    internal static bool IsUnresolvedProcess(string processName) =>
+        string.Equals(processName, "Unknown", StringComparison.OrdinalIgnoreCase);
 
     private static string DisplayNameOf(AudioSession s) =>
         string.IsNullOrWhiteSpace(s.DisplayName) ? s.ProcessName : s.DisplayName;
