@@ -218,7 +218,7 @@
                                       ToolTip="Activa o desactiva la banda" />
                             <Grid Grid.Column="1" IsEnabled="{Binding IsOn}" Style="{StaticResource DimWhenDisabled}">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="140" />
+                                    <ColumnDefinition Width="160" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="70" />
                                     <ColumnDefinition Width="16" />
@@ -287,10 +287,18 @@
                                     BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                                 <StackPanel>
                                     <CheckBox Content="Ecualizador" IsChecked="{Binding Eq.Value}" FontWeight="SemiBold" />
+                                    <local:EqCurve Height="200" Margin="0,8,0,0" Bands="{Binding Bands}"
+                                                   IsEnabled="{Binding Eq.Value}" Style="{StaticResource DimWhenDisabled}"
+                                                   CurveBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                                                   GridBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                                   TextBrush="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   PointFill="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                                   ToolTip="Arrastra un punto para cambiar la frecuencia y la ganancia de su banda; la rueda del ratón cambia el factor Q"
+                                                   ToolTipService.InitialShowDelay="1500" />
                                     <Grid Margin="0,8,0,0" Opacity="0.7">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="48" />
-                                            <ColumnDefinition Width="140" />
+                                            <ColumnDefinition Width="160" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="70" />
                                             <ColumnDefinition Width="16" />
