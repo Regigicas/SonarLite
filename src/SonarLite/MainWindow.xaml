@@ -27,7 +27,8 @@
         <DataTemplate x:Key="ChannelTemplate" DataType="{x:Type local:ChannelViewModel}">
             <Border Width="130" Margin="4" Padding="8" CornerRadius="6"
                     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{Binding IsEnabled, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel LastChildFill="True">
                     <TextBlock DockPanel.Dock="Top" Text="{Binding DisplayName}" Style="{StaticResource ChannelHeader}" />
                     <TextBlock DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,2,0,6" Opacity="0.75"
@@ -76,6 +77,24 @@
         <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
             <CheckBox DockPanel.Dock="Right" Content="Mostrar dB" IsChecked="{Binding ShowDecibels}"
                       ToolTip="Muestra la atenuación real de cada canal en dB en lugar del porcentaje" />
+            <!-- Optional channels: turning one off removes its virtual device from Windows -->
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,24,0"
+                        IsEnabled="{Binding IsConnected}">
+                <TextBlock Text="Canales:" VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.8" />
+                <ItemsControl ItemsSource="{Binding OptionalChannels}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:ChannelViewModel}">
+                            <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsEnabled}" MinWidth="0" Margin="0,0,16,0"
+                                      ToolTip="Activa o desactiva el canal en Sonar; desactivado, su dispositivo virtual desaparece de Windows" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center">
                     <Ellipse.Style>

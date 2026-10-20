@@ -197,6 +197,7 @@ public sealed partial class MainViewModel
         var devices = await client.GetAudioDevicesAsync();
         _lastRouting = routing;
         _lastDevices = devices;
+        ApplyChannelStates(devices);
         UpdateChannelOptions(routing);
         RememberApps(routing);
         await Router.EvaluateAsync(routing);
@@ -281,7 +282,9 @@ public sealed partial class MainViewModel
         var options = AppChannelRoles
             .Select(role => routing.FirstOrDefault(d => d.DataFlow == "render" && d.Role == role))
             .Where(d => d != null)
-            .Select(d => new ChannelOption(d!.Role, Channels.First(c => c.VolumeRole == d.Role).DisplayName, d.DeviceId))
+            .Select(d => (Device: d!, Channel: Channels.First(c => c.VolumeRole == d!.Role)))
+            .Where(x => x.Channel.IsEnabled)
+            .Select(x => new ChannelOption(x.Device.Role, x.Channel.DisplayName, x.Device.DeviceId))
             .ToList();
         if (options.SequenceEqual(ChannelOptions))
             return;

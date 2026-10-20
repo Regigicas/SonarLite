@@ -69,6 +69,7 @@ public sealed class ChannelViewModel : ObservableObject
     // Ignore server values for a moment after a local change, so a refresh doesn't
     // yank the slider back while the user is still dragging it.
     private static readonly TimeSpan LocalChangeGrace = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan ChannelToggleGrace = TimeSpan.FromSeconds(4);
 
     private readonly MainViewModel _owner;
     private readonly LatestValueSender<double> _volumeSender;
@@ -78,6 +79,8 @@ public sealed class ChannelViewModel : ObservableObject
     private bool _muted;
     private AudioDevice? _selectedDevice;
     private ConfigSummary? _selectedPreset;
+    private bool _isEnabled = true;
+    private DateTime _lastEnabledChange;
 
     public ChannelViewModel(MainViewModel owner, string volumeRole, string displayName,
         string? redirectionId = null, string? vad = null, string dataFlow = "render")
@@ -100,6 +103,8 @@ public sealed class ChannelViewModel : ObservableObject
     public string? Vad { get; }
     public string DataFlow { get; }
     public bool IsMaster => RedirectionId is null;
+    /// <summary>Sonar lets only these be turned off; game, chat and mic are always on.</summary>
+    public bool CanDisable => VolumeRole is "media" or "aux";
 
     public ObservableCollection<AudioDevice> Devices { get; } = [];
     public ObservableCollection<ConfigSummary> Presets { get; } = [];
@@ -164,6 +169,27 @@ public sealed class ChannelViewModel : ObservableObject
                 return;
             _owner.Run(c => c.SelectConfigAsync(value.Id));
         }
+    }
+
+    /// <summary>Channel's virtual endpoint exists in Windows; disabled channels are hidden.</summary>
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (!SetProperty(ref _isEnabled, value) || _fromServer || _owner.Client is null)
+                return;
+            _lastEnabledChange = DateTime.UtcNow;
+            _owner.SetChannelEnabled(this, value);
+        }
+    }
+
+    internal void ApplyEnabled(bool enabled)
+    {
+        // Sonar disables endpoints in the background: give it time before trusting a read.
+        if (DateTime.UtcNow - _lastEnabledChange < ChannelToggleGrace)
+            return;
+        FromServer(() => IsEnabled = enabled);
     }
 
     internal void ApplyVolume(VolumeState state)
@@ -255,7 +281,8 @@ public sealed partial class MainViewModel : ObservableObject
             new ChannelViewModel(this, "aux", "Aux", "aux", "aux"),
             new ChannelViewModel(this, "chatCapture", "Micrófono", "mic", "chatCapture", "capture"),
         ];
-        _chatMixSender = new LatestValueSender<double>(v => Client!.SetChatMixAsync(v / 100.0), ReportError);
+        OptionalChannels = Channels.Where(c => c.CanDisable).ToList();
+        _chatMixSender =new LatestValueSender<double>(v => Client!.SetChatMixAsync(v / 100.0), ReportError);
         _pollTimer = new DispatcherTimer(PollInterval, DispatcherPriority.Background, async (_, _) => await PollAsync(), dispatcher);
         _pollTimer.Stop();
         InitializeApps();
@@ -265,6 +292,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     public ChannelViewModel Master { get; }
     public IReadOnlyList<ChannelViewModel> Channels { get; }
+    /// <summary>Channels the user can turn off (media, aux).</summary>
+    public IReadOnlyList<ChannelViewModel> OptionalChannels { get; }
 
     public IReadOnlyList<ChannelOption> ChannelOptions
     {
@@ -403,6 +432,17 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    internal void SetChannelEnabled(ChannelViewModel channel, bool enabled)
+    {
+        Run(async c =>
+        {
+            await c.SetChannelEnabledAsync(channel.VolumeRole, enabled);
+            // The endpoint appears/disappears asynchronously; then the app list follows.
+            await Task.Delay(1000);
+            await RefreshAllAsync();
+        });
+    }
+
     internal void ReportError(Exception e)
     {
         _log.LogWarning(e, "Sonar API call failed");
@@ -511,8 +551,18 @@ public sealed partial class MainViewModel : ObservableObject
         finally { _chatMixFromServer = false; }
     }
 
+    /// <summary>A disabled channel's virtual endpoint is not among Sonar's active devices.</summary>
+    internal void ApplyChannelStates(IReadOnlyList<AudioDevice> devices)
+    {
+        if (!devices.Any(d => d.IsVad))
+            return;
+        foreach (var channel in OptionalChannels)
+            channel.ApplyEnabled(devices.Any(d => d.IsVad && d.State == "active" && d.Role == channel.VolumeRole));
+    }
+
     private void ApplyDevices(IReadOnlyList<AudioDevice> devices, IReadOnlyList<ClassicRedirection> redirections)
     {
+        ApplyChannelStates(devices);
         foreach (var channel in Channels)
         {
             var candidates = devices

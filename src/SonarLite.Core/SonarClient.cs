@@ -68,6 +68,15 @@ public sealed class SonarClient : IDisposable
     public Task SetRedirectionDeviceAsync(string redirectionId, string deviceId, CancellationToken ct = default) =>
         PutAsync($"classicRedirections/{redirectionId}/deviceId/{Uri.EscapeDataString(deviceId)}", ct);
 
+    /// <summary>
+    /// Shows or hides a channel's virtual endpoint in Windows. Sonar remembers it for media and
+    /// aux (the only ones its UI lets you turn off); a disabled channel is missing from
+    /// <see cref="GetAudioDevicesAsync"/> and <see cref="GetRoutingAsync"/>.
+    /// </summary>
+    /// <param name="role">Device role: media or aux.</param>
+    public Task SetChannelEnabledAsync(string role, bool enabled, CancellationToken ct = default) =>
+        PutAsync($"AudioInitialization/{role}/isEnabled/{(enabled ? "true" : "false")}", ct);
+
     // --- Presets ----------------------------------------------------------------
 
     /// <param name="vad">game, chatRender, chatCapture, media or aux.</param>
