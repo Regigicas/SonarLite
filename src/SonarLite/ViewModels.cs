@@ -33,6 +33,9 @@ internal sealed class LatestValueSender<T>(Func<T, Task> send, Action<Exception>
     private T? _latest;
     private bool _running;
 
+    /// <summary>A value is being sent or waiting to be.</summary>
+    public bool IsBusy => _running;
+
     public void Post(T value)
     {
         _latest = value;
@@ -167,7 +170,11 @@ public sealed class ChannelViewModel : ObservableObject
         {
             if (!SetProperty(ref _selectedPreset, value) || _fromServer || value is null || _owner.Client is null)
                 return;
-            _owner.Run(c => c.SelectConfigAsync(value.Id));
+            _owner.Run(async c =>
+            {
+                await c.SelectConfigAsync(value.Id);
+                await _owner.Editor.ReloadAsync();
+            });
         }
     }
 
@@ -286,9 +293,12 @@ public sealed partial class MainViewModel : ObservableObject
         _pollTimer = new DispatcherTimer(PollInterval, DispatcherPriority.Background, async (_, _) => await PollAsync(), dispatcher);
         _pollTimer.Stop();
         InitializeApps();
+        Editor = new PresetEditorViewModel(this);
     }
 
     internal SonarClient? Client { get; private set; }
+
+    public PresetEditorViewModel Editor { get; }
 
     public ChannelViewModel Master { get; }
     public IReadOnlyList<ChannelViewModel> Channels { get; }
@@ -407,6 +417,7 @@ public sealed partial class MainViewModel : ObservableObject
             Client = null;
         }
         IsConnected = false;
+        Editor.Clear();
         UpdatePolling();
     }
 
@@ -467,6 +478,7 @@ public sealed partial class MainViewModel : ObservableObject
             ApplyChatMix(chatMix.Result);
             ApplyDevices(devices.Result, redirections.Result);
             await ApplyPresetsAsync(client, selected.Result);
+            Editor.ApplySelected(selected.Result);
             await RefreshRoutingAsync();
             Status = "Conectado";
         }
@@ -573,7 +585,10 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task ApplyPresetsAsync(SonarClient client, IReadOnlyList<ConfigSummary> selected)
+    /// <summary>Forgets a channel's preset list so the next refresh reads it again.</summary>
+    internal void InvalidatePresets(string vad) => _presetCache.Remove(vad);
+
+    private async Task ApplyPresetsAsync(SonarClient client, IReadOnlyList<SonarConfig> selected)
     {
         foreach (var channel in Channels)
         {

@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SonarLite"
+        xmlns:core="clr-namespace:SonarLite.Core;assembly=SonarLite.Core"
         Title="Sonar Lite"
         Icon="app.ico"
         Width="940" Height="600" MinWidth="700" MinHeight="460"
@@ -22,6 +23,16 @@
             <Setter Property="FontSize" Value="16" />
         </Style>
 
+        <!-- Preset in a list: favorites carry a star (Sonar lists them first). -->
+        <DataTemplate x:Key="PresetItemTemplate" DataType="{x:Type core:ConfigSummary}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Style="{StaticResource IconFont}" FontSize="11" Text="&#xE735;"
+                           Margin="0,0,6,0" VerticalAlignment="Center" Opacity="0.8"
+                           Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </DataTemplate>
+
         <!-- One mixer column: name, value, slider, mute, output device, preset.
              Combo items trim with an ellipsis: device names and translations vary in length. -->
         <DataTemplate x:Key="ChannelTemplate" DataType="{x:Type local:ChannelViewModel}">
@@ -37,13 +48,8 @@
                     <ComboBox DockPanel.Dock="Bottom" Margin="0,6,0,0" ItemsSource="{Binding Presets}"
                               SelectedItem="{Binding SelectedPreset}"
                               ToolTip="Preset de ecualización" MaxDropDownHeight="420"
-                              Visibility="{Binding IsMaster, Converter={StaticResource InverseBoolToVisibility}}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                              ItemTemplate="{StaticResource PresetItemTemplate}"
+                              Visibility="{Binding IsMaster, Converter={StaticResource InverseBoolToVisibility}}" />
                     <ComboBox DockPanel.Dock="Bottom" Margin="0,6,0,0" ItemsSource="{Binding Devices}"
                               SelectedItem="{Binding SelectedDevice}"
                               ToolTip="{Binding SelectedDevice.FriendlyName}"
@@ -151,6 +157,101 @@
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
                         </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Presets">
+                <TabItem.Resources>
+                    <!-- Rows of a preset card, one template per kind of setting.
+                         Minimum/Maximum go before Value so the slider never coerces a real value. -->
+                    <!-- The Fluent slider looks the same when disabled: dim the whole row instead. -->
+                    <Style x:Key="DimWhenDisabled" TargetType="FrameworkElement">
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                    <DataTemplate DataType="{x:Type local:SliderSetting}">
+                        <Grid Margin="0,4,0,0" IsEnabled="{Binding IsEnabled}" Style="{StaticResource DimWhenDisabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="64" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <Slider Grid.Column="1" VerticalAlignment="Center" IsMoveToPointEnabled="True"
+                                    Minimum="{Binding Minimum, Mode=OneTime}" Maximum="{Binding Maximum, Mode=OneTime}"
+                                    SmallChange="{Binding SmallChange, Mode=OneTime}" LargeChange="{Binding LargeChange, Mode=OneTime}"
+                                    Value="{Binding Value}" />
+                            <TextBlock Grid.Column="2" Text="{Binding ValueText}" VerticalAlignment="Center"
+                                       TextAlignment="Right" Opacity="0.8" />
+                        </Grid>
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type local:ToggleSetting}">
+                        <CheckBox Margin="0,6,0,0" Content="{Binding Label}" IsChecked="{Binding Value}" IsEnabled="{Binding IsEnabled}" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type local:ChoiceSetting}">
+                        <DockPanel Margin="0,6,0,0" IsEnabled="{Binding IsEnabled}" Style="{StaticResource DimWhenDisabled}">
+                            <TextBlock Width="80" Text="{Binding Label}" VerticalAlignment="Center" />
+                            <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" DisplayMemberPath="Label" />
+                        </DockPanel>
+                    </DataTemplate>
+                </TabItem.Resources>
+
+                <DockPanel Margin="0,8,0,0" DataContext="{Binding Editor}" IsEnabled="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <!-- Channel, preset and preset management -->
+                    <WrapPanel DockPanel.Dock="Top" Margin="4,0,4,0">
+                        <ComboBox Width="130" Margin="0,0,8,8" ItemsSource="{Binding Channels}" SelectedItem="{Binding Channel}"
+                                  DisplayMemberPath="DisplayName" ToolTip="Canal" />
+                        <ComboBox Width="240" Margin="0,0,8,8" ItemsSource="{Binding Channel.Presets}"
+                                  SelectedItem="{Binding Channel.SelectedPreset}" MaxDropDownHeight="420"
+                                  ItemTemplate="{StaticResource PresetItemTemplate}"
+                                  ToolTip="Preset seleccionado en el canal" />
+                        <ToggleButton Margin="0,0,16,8" Padding="8,4" IsChecked="{Binding IsFavorite}"
+                                      IsEnabled="{Binding HasConfig}" ToolTip="Favorito: aparece al principio de la lista">
+                            <TextBlock Style="{StaticResource IconFont}" FontSize="14" Text="&#xE734;" />
+                        </ToggleButton>
+                        <Button Content="Nuevo" Margin="0,0,6,8" Command="{Binding NewCommand}"
+                                ToolTip="Crea un preset con los ajustes neutros de Sonar" />
+                        <Button Content="Duplicar" Margin="0,0,6,8" Command="{Binding DuplicateCommand}" IsEnabled="{Binding HasConfig}"
+                                ToolTip="Crea una copia del preset con sus ajustes actuales" />
+                        <Button Content="Renombrar" Margin="0,0,6,8" Command="{Binding RenameCommand}" IsEnabled="{Binding CanRename}"
+                                ToolTip="Los presets de SteelSeries no se pueden renombrar" />
+                        <Button Content="Restablecer" Margin="0,0,6,8" Command="{Binding ResetCommand}" IsEnabled="{Binding HasConfig}"
+                                ToolTip="Vuelve a los valores predeterminados del preset" />
+                        <Button Content="Borrar" Margin="0,0,6,8" Command="{Binding DeleteCommand}" IsEnabled="{Binding CanDelete}"
+                                ToolTip="Solo se pueden borrar presets propios, y cada canal conserva al menos uno" />
+                    </WrapPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="4,0,4,8" Opacity="0.75" TextWrapping="Wrap" Text="{Binding PresetInfo}" />
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding HasConfig, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl ItemsSource="{Binding Sections}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type local:PresetSection}">
+                                    <Border Width="290" Margin="4" Padding="12,10" CornerRadius="6"
+                                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel>
+                                            <CheckBox Content="{Binding Title}" IsChecked="{Binding Toggle.Value}" FontWeight="SemiBold"
+                                                      Visibility="{Binding HasToggle, Converter={StaticResource BoolToVisibility}}" />
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Margin="0,4"
+                                                       Visibility="{Binding HasToggle, Converter={StaticResource InverseBoolToVisibility}}" />
+                                            <ItemsControl ItemsSource="{Binding Items}" Focusable="False" />
+                                            <TextBlock Text="{Binding Note}" Margin="0,8,0,0" FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                                                       Visibility="{Binding HasNote, Converter={StaticResource BoolToVisibility}}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </ScrollViewer>
                 </DockPanel>
             </TabItem>

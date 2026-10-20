@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SonarLite.Core;
 
@@ -83,11 +84,49 @@ public sealed class SonarClient : IDisposable
     public async Task<IReadOnlyList<ConfigSummary>> GetConfigsAsync(string vad, CancellationToken ct = default) =>
         (await _http.GetFromJsonAsync<List<ConfigSummary>>($"configs?vad={vad}", Json, ct))!;
 
-    public async Task<IReadOnlyList<ConfigSummary>> GetSelectedConfigsAsync(CancellationToken ct = default) =>
-        (await _http.GetFromJsonAsync<List<ConfigSummary>>("configs/selected", Json, ct))!;
+    /// <summary>The selected config of each virtual device, with all its settings.</summary>
+    public async Task<IReadOnlyList<SonarConfig>> GetSelectedConfigsAsync(CancellationToken ct = default)
+    {
+        var list = await _http.GetFromJsonAsync<JsonArray>("configs/selected", Json, ct);
+        return list!.OfType<JsonObject>().Select(o => new SonarConfig(o)).ToList();
+    }
 
     public Task SelectConfigAsync(Guid configId, CancellationToken ct = default) =>
         PutAsync($"configs/{configId}/select", ct);
+
+    /// <summary>Replaces a config; if it is the selected one, Sonar applies it right away.</summary>
+    public async Task UpdateConfigAsync(string configJson, CancellationToken ct = default)
+    {
+        using var response = await _http.PutAsync("configs", new StringContent(configJson, Encoding.UTF8, "application/json"), ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// Creates a config from <paramref name="config"/> (Sonar assigns the id). A missing
+    /// <c>data</c> means Sonar's neutral defaults, which are also the new config's reset values.
+    /// </summary>
+    public async Task<SonarConfig> CreateConfigAsync(JsonObject config, CancellationToken ct = default)
+    {
+        using var response = await _http.PostAsJsonAsync("configs", config, Json, ct);
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<JsonObject>(Json, ct);
+        return new SonarConfig(created!);
+    }
+
+    /// <summary>Deletes a config; if it was selected, Sonar selects the device's default preset.</summary>
+    public async Task DeleteConfigAsync(Guid configId, CancellationToken ct = default)
+    {
+        using var response = await _http.DeleteAsync($"configs/{configId}", ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <summary>Sonar ignores the request when the device already has 9 favorites.</summary>
+    public async Task SetConfigFavoriteAsync(Guid configId, bool favorite, CancellationToken ct = default)
+    {
+        using var response = await _http.PostAsync($"configs/{configId}/isFavorite/{(favorite ? "true" : "false")}",
+            new StringContent("", Encoding.UTF8, "application/json"), ct);
+        response.EnsureSuccessStatusCode();
+    }
 
     // --- Per-application routing ------------------------------------------------
 

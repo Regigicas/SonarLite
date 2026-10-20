@@ -1,0 +1,13 @@
+<Window x:Class="SonarLite.ConfirmDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="380" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <StackPanel Margin="16">
+        <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="ConfirmButton" MinWidth="90" Click="OnConfirm" />
+            <Button Content="Cancelar" IsCancel="True" IsDefault="True" MinWidth="90" Margin="8,0,0,0" />
+        </StackPanel>
+    </StackPanel>
+</Window>
