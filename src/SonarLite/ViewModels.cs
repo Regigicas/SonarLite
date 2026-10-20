@@ -109,12 +109,28 @@ public sealed class ChannelViewModel : ObservableObject
         get => _volume;
         set
         {
-            if (!SetProperty(ref _volume, Math.Round(value)) || _fromServer || _owner.Client is null)
+            if (!SetProperty(ref _volume, Math.Round(value)))
+                return;
+            OnPropertyChanged(nameof(VolumeText));
+            if (_fromServer || _owner.Client is null)
                 return;
             _lastLocalChange = DateTime.UtcNow;
             _volumeSender.Post(_volume);
         }
     }
+
+    public string VolumeText
+    {
+        get
+        {
+            if (!_owner.ShowDecibels)
+                return $"{Volume:0} %";
+            double db = VolumeCurve.ToDecibels(Volume / 100.0);
+            return double.IsNegativeInfinity(db) ? "−∞ dB" : $"{db:0.0} dB";
+        }
+    }
+
+    internal void RefreshVolumeText() => OnPropertyChanged(nameof(VolumeText));
 
     public bool Muted
     {
@@ -270,6 +286,7 @@ public sealed class MainViewModel : ObservableObject
 
     private readonly Dispatcher _dispatcher;
     private readonly ILogger _log;
+    private readonly SettingsStore _settings;
     private readonly DispatcherTimer _pollTimer;
     private readonly Dictionary<string, IReadOnlyList<ConfigSummary>> _presetCache = [];
     private CancellationTokenSource? _eventsCts;
@@ -283,10 +300,11 @@ public sealed class MainViewModel : ObservableObject
     private readonly LatestValueSender<double> _chatMixSender;
     private IReadOnlyList<ChannelOption> _channelOptions = [];
 
-    public MainViewModel(Dispatcher dispatcher, ILogger log)
+    internal MainViewModel(Dispatcher dispatcher, ILogger log, SettingsStore settings)
     {
         _dispatcher = dispatcher;
         _log = log;
+        _settings = settings;
         Master = new ChannelViewModel(this, "master", "Master");
         Channels =
         [
@@ -317,6 +335,23 @@ public sealed class MainViewModel : ObservableObject
     {
         get => _status;
         set => SetProperty(ref _status, value);
+    }
+
+    /// <summary>Show channel levels as the real attenuation in dB instead of a percentage.</summary>
+    public bool ShowDecibels
+    {
+        get => _settings.Current.ShowDecibels;
+        set
+        {
+            if (_settings.Current.ShowDecibels == value)
+                return;
+            _settings.Current.ShowDecibels = value;
+            _settings.Save();
+            OnPropertyChanged(nameof(ShowDecibels));
+            Master.RefreshVolumeText();
+            foreach (var channel in Channels)
+                channel.RefreshVolumeText();
+        }
     }
 
     public bool IsConnected

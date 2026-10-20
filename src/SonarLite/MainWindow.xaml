@@ -29,7 +29,7 @@
                 <DockPanel LastChildFill="True">
                     <TextBlock DockPanel.Dock="Top" Text="{Binding DisplayName}" Style="{StaticResource ChannelHeader}" />
                     <TextBlock DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,2,0,6" Opacity="0.75"
-                               Text="{Binding Volume, StringFormat={}{0:0} %}" />
+                               Text="{Binding VolumeText}" />
 
                     <ComboBox DockPanel.Dock="Bottom" Margin="0,6,0,0" ItemsSource="{Binding Presets}"
                               SelectedItem="{Binding SelectedPreset}" DisplayMemberPath="Name"
@@ -59,8 +59,10 @@
 
     <DockPanel Margin="12">
         <!-- Status bar -->
-        <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
-            <StackPanel Orientation="Horizontal">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <CheckBox DockPanel.Dock="Right" Content="Mostrar dB" IsChecked="{Binding ShowDecibels}"
+                      ToolTip="Muestra la atenuación real de cada canal en dB en lugar del porcentaje" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center">
                     <Ellipse.Style>
                         <Style TargetType="Ellipse">
@@ -75,7 +77,7 @@
                 </Ellipse>
                 <TextBlock Text="{Binding Status}" Opacity="0.8" TextTrimming="CharacterEllipsis" />
             </StackPanel>
-        </Border>
+        </DockPanel>
 
         <TabControl>
             <TabItem Header="Mezclador">

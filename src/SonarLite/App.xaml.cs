@@ -73,7 +73,8 @@ public partial class App : System.Windows.Application
             Autostart.Enable();
         }
 
-        _vm = new MainViewModel(Dispatcher, _loggerFactory.CreateLogger("UI"));
+        var settings = new SettingsStore(Path.Combine(DataDirectory, "settings.json"));
+        _vm = new MainViewModel(Dispatcher, _loggerFactory.CreateLogger("UI"), settings);
         _tray = new TrayIcon(OpenWindow, RestartSonarAsync, SwitchToGgAsync, ExitAsync);
         SessionEnding += async (_, _) => await ExitAsync();
 
