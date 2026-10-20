@@ -95,6 +95,26 @@ El master no es un endpoint: reescala proporcionalmente los canales.
 | PUT | `/classicRedirections/render/deviceId/{mmDeviceId}` (todos los de salida) |
 | GET/PUT | `/streamRedirections`, `/streamRedirections/{id}/deviceId/{deviceId}`, `/{id}/redirections/{rol}/isEnabled/{bool}` |
 
+### Activar / desactivar canales
+| Método | Ruta |
+|---|---|
+| PUT | `/AudioInitialization/{rol}/isEnabled/{bool}` → 200 |
+
+Es lo que usa GG para desactivar canales. Verificado:
+- Sonar oculta o muestra el endpoint virtual del canal en Windows
+  (`IPolicyConfig::SetEndpointVisibility`); desactivado, desaparece del panel de sonido de
+  Windows, de `GET /audioDevices` y de `GET /AudioDeviceRouting`. No hay GET de estado: el
+  canal está activo si su VAD aparece en `/audioDevices` (que solo lista endpoints activos).
+- Al ver el cambio de estado del endpoint, Sonar guarda `IS_MEDIA_ENABLED` / `IS_AUX_ENABLED`
+  (`key_value` de `database.db`) y en cada arranque reaplica ese estado. Solo persiste Media y
+  Aux; también lo recoge si el endpoint se desactiva desde el panel de sonido de Windows.
+- La API acepta cualquier rol, pero la interfaz de GG solo permite desactivar Media y Aux
+  (Juego, Chat y Micrófono son los canales principales y no se persistirían).
+- Desactivar es asíncrono (la petición vuelve antes de que desaparezca el endpoint); activar
+  espera a que el endpoint esté activo.
+- Volúmenes (`/volumeSettings/classic`), presets y `/classicRedirections` siguen incluyendo el
+  canal desactivado.
+
 ### Presets / EQ
 | Método | Ruta |
 |---|---|
