@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace SonarLite;
 
@@ -39,6 +41,16 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
         Activate();
+    }
+
+    /// <summary>Enter applies a typed value without leaving the box (it applies on losing focus too).</summary>
+    private void OnValueBoxKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || sender is not TextBox box)
+            return;
+        box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        box.SelectAll();
+        e.Handled = true;
     }
 
     protected override void OnClosing(CancelEventArgs e)

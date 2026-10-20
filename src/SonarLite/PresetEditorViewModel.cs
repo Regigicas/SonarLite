@@ -154,6 +154,8 @@ public sealed class PresetEditorViewModel : ObservableObject
     private ChannelViewModel _channel;
     private SonarConfig? _config;
     private IReadOnlyList<PresetSection> _sections = [];
+    private ToggleSetting _eq = null!;
+    private IReadOnlyList<EqBand> _bands = [];
     private DateTime _lastLocalChange;
 
     internal PresetEditorViewModel(MainViewModel owner)
@@ -194,6 +196,19 @@ public sealed class PresetEditorViewModel : ObservableObject
     {
         get => _sections;
         private set => SetProperty(ref _sections, value);
+    }
+
+    /// <summary>The parametric EQ's switch (<c>parametricEQ.enabled</c>).</summary>
+    public ToggleSetting Eq
+    {
+        get => _eq;
+        private set => SetProperty(ref _eq, value);
+    }
+
+    public IReadOnlyList<EqBand> Bands
+    {
+        get => _bands;
+        private set => SetProperty(ref _bands, value);
     }
 
     public bool HasConfig => _config != null;
@@ -280,7 +295,7 @@ public sealed class PresetEditorViewModel : ObservableObject
         {
             if (_config != null)
             {
-                foreach (var setting in Sections.SelectMany(s => s.AllSettings))
+                foreach (var setting in AllSettings)
                     setting.Load(_config);
             }
         }
@@ -303,9 +318,12 @@ public sealed class PresetEditorViewModel : ObservableObject
 
     private void RefreshEnabled()
     {
-        foreach (var setting in Sections.SelectMany(s => s.AllSettings))
+        foreach (var setting in AllSettings)
             setting.RefreshEnabled();
     }
+
+    private IEnumerable<PresetSetting> AllSettings =>
+        Sections.SelectMany(s => s.AllSettings).Append(Eq).Concat(Bands);
 
     private void OnChannelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -435,24 +453,26 @@ public sealed class PresetEditorViewModel : ObservableObject
 
     // --- Settings per kind of channel (ranges and rules taken from GG's UI) ----------
 
+    private static readonly string[] Boosts = ["bassBoostState", "voiceClarityState", "trebleBoostState"];
+
     private void BuildSections()
     {
-        Sections = _channel.Vad is "chatRender" or "chatCapture" ? VoiceSections() : PlaybackSections();
+        bool isVoice = _channel.Vad is "chatRender" or "chatCapture";
+        // GG keeps the bass / voice / treble boosts switched on and off together with the EQ.
+        var eq = new ToggleSetting(this, "Ecualizador", "parametricEQ.enabled", onChanged: isVoice ? null : on =>
+        {
+            foreach (var boost in Boosts)
+                Set(boost + ".enabled", on);
+        });
+        Eq = eq;
+        Bands = Enumerable.Range(1, 10).Select(n => new EqBand(this, n, () => eq.Value)).ToArray();
+        Sections = isVoice ? VoiceSections() : PlaybackSections(eq);
         RefreshEnabled();
     }
 
-    private const string EqNote = "Las bandas del ecualizador paramétrico aún no se editan aquí; se mantienen las del preset.";
-
     /// <summary>Game, media and aux.</summary>
-    private IReadOnlyList<PresetSection> PlaybackSections()
+    private IReadOnlyList<PresetSection> PlaybackSections(ToggleSetting eq)
     {
-        string[] boosts = ["bassBoostState", "voiceClarityState", "trebleBoostState"];
-        // GG keeps the bass / voice / treble boosts switched on and off together with the EQ.
-        var eq = new ToggleSetting(this, "Ecualizador", "parametricEQ.enabled", onChanged: on =>
-        {
-            foreach (var boost in boosts)
-                Set(boost + ".enabled", on);
-        });
         SliderSetting Boost(string label, string state) => new(this, label, state + ".value", -12, 12, 0.1, "{0:0.0} dB",
             enabledWhen: () => eq.Value, onChanged: _ => Set(state + ".enabled", eq.Value));
 
@@ -460,9 +480,9 @@ public sealed class PresetEditorViewModel : ObservableObject
         var smartVolume = new ToggleSetting(this, "Smart Volume", "smartVolume.enabled");
         return
         [
-            new PresetSection("Ecualizador", eq,
+            new PresetSection("Graves, voz y agudos", null,
                 [Boost("Graves", "bassBoostState"), Boost("Voz", "voiceClarityState"), Boost("Agudos", "trebleBoostState")],
-                EqNote),
+                "Refuerzos aparte de las bandas; se activan y desactivan con el ecualizador."),
             new PresetSection("Audio espacial", surround,
                 [new ChoiceSetting(this, "Modo", "formFactor",
                     [new ChoiceOption("headphones", "Auriculares"), new ChoiceOption("speakers", "Altavoces")],
@@ -478,7 +498,6 @@ public sealed class PresetEditorViewModel : ObservableObject
     /// <summary>Chat (incoming voice) and microphone.</summary>
     private IReadOnlyList<PresetSection> VoiceSections()
     {
-        var eq = new ToggleSetting(this, "Ecualizador", "parametricEQ.enabled");
         var clearCast = new ToggleSetting(this, "Cancelación de ruido IA", "noiseCancelingState.enabled");
         var background = new ToggleSetting(this, "Ruido de fondo", "noiseReductionState.enabled", () => !clearCast.Value);
         var impact = new ToggleSetting(this, "Ruido de impactos", "impactNoiseReductionState.enabled", () => !clearCast.Value);
@@ -488,7 +507,6 @@ public sealed class PresetEditorViewModel : ObservableObject
         bool isMic = _channel.Vad == "chatCapture";
         return
         [
-            new PresetSection("Ecualizador", eq, [], EqNote),
             new PresetSection("Cancelación de ruido IA (ClearCast)", clearCast,
                 [new SliderSetting(this, "Intensidad", "noiseCancelingState.value", 0, 100, 1, "{0:0} %",
                     NoiseCancelingToPercent, PercentToNoiseCanceling, () => clearCast.Value)],
