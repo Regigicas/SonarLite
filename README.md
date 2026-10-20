@@ -9,6 +9,10 @@ la app hace de "GG" para Sonar y ofrece su propia interfaz en la bandeja del sis
 | Procesos | 5 | 2 (SonarLite + SteelSeriesSonar) |
 | RAM (working set) | ~900 MB | ~120 MB en reposo |
 
+![Mezclador](docs/img/mezclador.png)
+
+![Enrutado de aplicaciones](docs/img/aplicaciones.png)
+
 ## Requisitos
 
 - Windows 10/11 con **SteelSeries GG instalado** (Sonar Lite usa su `SteelSeriesSonar.exe`, su driver y su APO).
