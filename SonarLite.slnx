@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FakeGG/FakeGG.csproj" />
+    <Project Path="src/SonarLite.Core/SonarLite.Core.csproj" />
+    <Project Path="src/SonarLite/SonarLite.csproj" />
+  </Folder>
+</Solution>

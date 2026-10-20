@@ -1,0 +1,8 @@
+# Decompiled SteelSeries code: local reference only, never commit or redistribute
+_decompiled/
+
+bin/
+obj/
+*.user
+.vs/
+logs/
