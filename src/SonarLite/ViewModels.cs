@@ -292,6 +292,7 @@ public sealed partial class MainViewModel : ObservableObject
             Master.RefreshVolumeText();
             foreach (var channel in Channels)
                 channel.RefreshVolumeText();
+            RefreshChatMixText();
         }
     }
 
@@ -307,10 +308,43 @@ public sealed partial class MainViewModel : ObservableObject
         get => _chatMix;
         set
         {
-            if (!SetProperty(ref _chatMix, Math.Round(value)) || _chatMixFromServer || Client is null)
+            if (!SetProperty(ref _chatMix, Math.Round(value)))
+                return;
+            RefreshChatMixText();
+            if (_chatMixFromServer || Client is null)
                 return;
             _chatMixSender.Post(_chatMix);
         }
+    }
+
+    public string ChatMixGameText => $"Juego {FormatGain(ChatMixGains(ChatMix / 100.0).Game)}";
+    public string ChatMixChatText => $"Chat {FormatGain(ChatMixGains(ChatMix / 100.0).Chat)}";
+
+    private void RefreshChatMixText()
+    {
+        OnPropertyChanged(nameof(ChatMixGameText));
+        OnPropertyChanged(nameof(ChatMixChatText));
+    }
+
+    /// <summary>
+    /// Same mapping as Sonar's ChatMixService: the balance is rescaled non-linearly and only
+    /// the opposite side is attenuated (the side the slider moves towards stays at 100 %).
+    /// </summary>
+    private static (double Game, double Chat) ChatMixGains(double balance)
+    {
+        double magnitude = Math.Abs(balance);
+        if (magnitude < 1e-6)
+            return (1, 1);
+        double scaled = Math.Sign(balance) * 2 * magnitude / (magnitude + 1);
+        return (Math.Clamp(1 - scaled, 0, 1), Math.Clamp(1 + scaled, 0, 1));
+    }
+
+    /// <summary>Linear gain as % or, when showing dB, as 20·log10.</summary>
+    private string FormatGain(double gain)
+    {
+        if (!ShowDecibels)
+            return $"{gain * 100:0} %";
+        return gain <= 0 ? "−∞ dB" : $"{20 * Math.Log10(gain):0.0} dB";
     }
 
     public bool ChatMixEnabled

@@ -95,11 +95,14 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="ChatMix" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0" />
-                            <TextBlock Grid.Column="1" Text="Juego" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <!-- MinWidth keeps the slider from jumping as the numbers change width -->
+                            <TextBlock Grid.Column="1" Text="{Binding ChatMixGameText}" VerticalAlignment="Center"
+                                       Margin="0,0,8,0" MinWidth="100" TextAlignment="Right" />
                             <Slider Grid.Column="2" Minimum="-100" Maximum="100" SmallChange="1" LargeChange="10"
                                     IsMoveToPointEnabled="True" VerticalAlignment="Center"
-                                    Value="{Binding ChatMix}" ToolTip="{Binding ChatMix}" />
-                            <TextBlock Grid.Column="3" Text="Chat" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                    Value="{Binding ChatMix}" />
+                            <TextBlock Grid.Column="3" Text="{Binding ChatMixChatText}" VerticalAlignment="Center"
+                                       Margin="8,0,0,0" MinWidth="100" />
                         </Grid>
                     </Border>
 
