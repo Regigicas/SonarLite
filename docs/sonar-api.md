@@ -95,6 +95,16 @@ El master no es un endpoint: reescala proporcionalmente los canales.
 | PUT | `/classicRedirections/render/deviceId/{mmDeviceId}` (todos los de salida) |
 | GET/PUT | `/streamRedirections`, `/streamRedirections/{id}/deviceId/{deviceId}`, `/{id}/redirections/{rol}/isEnabled/{bool}` |
 
+Verificado contra el proceso:
+- Sonar guarda la salida de cada canal por ID de endpoint (`LAST_SELECTED_GAME`, `_CHAT_RENDER`,
+  `_MEDIA`, `_AUX`, `_CHAT_CAPTURE` en `key_value`) y la reaplica al arrancar.
+- Si Windows re-enumera los endpoints (visto tras instalar una actualización de Windows al
+  reiniciar), el mismo dispositivo recibe otro ID. Sonar arranca entonces con
+  `deviceId: ""` e `isRunning: false` en esos canales: el audio no sale por ningún sitio. Con
+  `IS_FALLBACK_ENABLED = False` (lo normal) no elige otro dispositivo.
+- Por eso SonarLite guarda en `settings.json` el ID y el nombre del dispositivo de cada canal, y
+  si el canal se queda sin salida lo reasigna (por ID o, si ya no existe, por nombre).
+
 ### Activar / desactivar canales
 | Método | Ruta |
 |---|---|
