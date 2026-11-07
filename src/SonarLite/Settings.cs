@@ -11,7 +11,16 @@ internal sealed class AppSettings
     public List<KnownApp> KnownApps { get; set; } = [];
 
     public List<RoutingRule> RoutingRules { get; set; } = [];
+
+    /// <summary>Last physical device of each channel, keyed by redirection id (game, chat, …).</summary>
+    public Dictionary<string, SavedOutput> OutputDevices { get; set; } = [];
 }
+
+/// <summary>
+/// A channel's physical device. The name is kept because Windows can re-enumerate endpoints
+/// (e.g. after an OS update) and give the same device a new id.
+/// </summary>
+internal sealed record SavedOutput(string Id, string FriendlyName);
 
 internal sealed record KnownApp(string ProcessName, string DisplayName, DateTime LastSeenUtc);
 

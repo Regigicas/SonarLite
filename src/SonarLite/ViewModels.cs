@@ -159,6 +159,7 @@ public sealed class ChannelViewModel : ObservableObject
         {
             if (!SetProperty(ref _selectedDevice, value) || _fromServer || value is null || _owner.Client is null)
                 return;
+            _owner.RememberOutput(RedirectionId!, value);
             _owner.Run(c => c.SetRedirectionDeviceAsync(RedirectionId!, value.Id));
         }
     }
@@ -477,6 +478,8 @@ public sealed partial class MainViewModel : ObservableObject
             ApplyVolumes(volumes.Result);
             ApplyChatMix(chatMix.Result);
             ApplyDevices(devices.Result, redirections.Result);
+            if (await RestoreOutputsAsync(client, devices.Result, redirections.Result))
+                ApplyDevices(devices.Result, await client.GetRedirectionsAsync());
             await ApplyPresetsAsync(client, selected.Result);
             Editor.ApplySelected(selected.Result);
             await RefreshRoutingAsync();
@@ -572,17 +575,65 @@ public sealed partial class MainViewModel : ObservableObject
             channel.ApplyEnabled(devices.Any(d => d.IsVad && d.State == "active" && d.Role == channel.VolumeRole));
     }
 
+    private static IEnumerable<AudioDevice> OutputCandidates(IReadOnlyList<AudioDevice> devices, ChannelViewModel channel) =>
+        devices.Where(d => !d.IsVad && d.State == "active" && d.DataFlow == channel.DataFlow);
+
     private void ApplyDevices(IReadOnlyList<AudioDevice> devices, IReadOnlyList<ClassicRedirection> redirections)
     {
         ApplyChannelStates(devices);
         foreach (var channel in Channels)
         {
-            var candidates = devices
-                .Where(d => !d.IsVad && d.State == "active" && d.DataFlow == channel.DataFlow)
+            var candidates = OutputCandidates(devices, channel)
                 .OrderBy(d => d.FriendlyName, StringComparer.CurrentCultureIgnoreCase);
             var selectedId = redirections.FirstOrDefault(r => r.Id == channel.RedirectionId)?.DeviceId;
             channel.ApplyDevices(candidates, selectedId);
         }
+    }
+
+    internal void RememberOutput(string redirectionId, AudioDevice device)
+    {
+        var saved = new SavedOutput(device.Id, device.FriendlyName);
+        if (_settings.Current.OutputDevices.GetValueOrDefault(redirectionId) == saved)
+            return;
+        _settings.Current.OutputDevices[redirectionId] = saved;
+        _settings.Save();
+    }
+
+    /// <summary>
+    /// Sonar keeps each channel's output by endpoint id. When Windows re-enumerates endpoints
+    /// (an OS update, a driver reinstall) the id is gone and Sonar starts with that channel
+    /// going nowhere. Learn the working device of each channel and, when a channel has none,
+    /// put the remembered one back, by id or else by name.
+    /// </summary>
+    /// <returns>Whether any redirection was changed.</returns>
+    private async Task<bool> RestoreOutputsAsync(SonarClient client,
+        IReadOnlyList<AudioDevice> devices, IReadOnlyList<ClassicRedirection> redirections)
+    {
+        bool changed = false;
+        foreach (var channel in Channels)
+        {
+            var redirectionId = channel.RedirectionId!;
+            var candidates = OutputCandidates(devices, channel).ToList();
+            var currentId = redirections.FirstOrDefault(r => r.Id == redirectionId)?.DeviceId;
+            var current = candidates.FirstOrDefault(d => d.Id == currentId);
+            if (current != null)
+            {
+                RememberOutput(redirectionId, current);
+                continue;
+            }
+            if (!_settings.Current.OutputDevices.TryGetValue(redirectionId, out var saved))
+                continue;
+            var match = candidates.FirstOrDefault(d => d.Id == saved.Id)
+                ?? candidates.FirstOrDefault(d => string.Equals(d.FriendlyName, saved.FriendlyName, StringComparison.OrdinalIgnoreCase));
+            if (match is null)
+                continue; // Unplugged for now; try again on a later refresh.
+            _log.LogInformation("Restoring output of {Channel} to {Device} (was {Previous})",
+                redirectionId, match.FriendlyName, string.IsNullOrEmpty(currentId) ? "none" : currentId);
+            await client.SetRedirectionDeviceAsync(redirectionId, match.Id);
+            RememberOutput(redirectionId, match);
+            changed = true;
+        }
+        return changed;
     }
 
     /// <summary>Forgets a channel's preset list so the next refresh reads it again.</summary>
